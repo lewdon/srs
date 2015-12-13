@@ -1,7 +1,7 @@
 /*
 The MIT License (MIT)
 
-Copyright (c) 2013-2015 SRS(simple-rtmp-server)
+Copyright (c) 2013-2015 SRS(ossrs)
 
 Permission is hereby granted, free of charge, to any person obtaining a copy of
 this software and associated documentation files (the "Software"), to deal in
@@ -38,6 +38,7 @@ using namespace std;
 #include <srs_app_config.hpp>
 #include <srs_kernel_utility.hpp>
 #include <srs_app_http_conn.hpp>
+#include <srs_app_utility.hpp>
 
 #define SRS_HTTP_RESPONSE_OK    SRS_XSTR(ERROR_SUCCESS)
 
@@ -300,6 +301,12 @@ int SrsHttpHooks::on_hls(int cid, string url, SrsRequest* req, string file, stri
     int client_id = cid;
     std::string cwd = _srs_config->cwd();
     
+    // the ts_url is under the same dir of m3u8_url.
+    string prefix = srs_path_dirname(m3u8_url);
+    if (!prefix.empty() && !srs_string_is_http(ts_url)) {
+        ts_url = prefix + "/" + ts_url;
+    }
+    
     std::stringstream ss;
     ss << SRS_JOBJECT_START
         << SRS_JFIELD_STR("action", "on_hls") << SRS_JFIELD_CONT
@@ -341,7 +348,7 @@ int SrsHttpHooks::on_hls_notify(int cid, std::string url, SrsRequest* req, std::
     int client_id = cid;
     std::string cwd = _srs_config->cwd();
     
-    if (srs_string_starts_with(ts_url, "http://") || srs_string_starts_with(ts_url, "https://")) {
+    if (srs_string_is_http(ts_url)) {
         url = ts_url;
     }
     
@@ -429,7 +436,7 @@ int SrsHttpHooks::do_post(std::string url, std::string req, int& code, string& r
     }
     
     // ensure the http status is ok.
-    // https://github.com/simple-rtmp-server/srs/issues/158
+    // https://github.com/ossrs/srs/issues/158
     if (code != SRS_CONSTS_HTTP_OK) {
         ret = ERROR_HTTP_STATUS_INVALID;
         srs_error("invalid response status=%d. ret=%d", code, ret);
